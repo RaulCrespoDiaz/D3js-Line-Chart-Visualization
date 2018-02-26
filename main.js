@@ -48,6 +48,7 @@ function drawChart(totalSales) {
   appendXAxis(totalSales);
   appendYAxis(totalSales);
   appendLineCharts(totalSales);
+  appendCircles(totalSales);
 }
 
 function clearCanvas() {
@@ -114,30 +115,83 @@ function appendLineCharts(totalSales)
 {
   // define the line
   var valueline = d3.line()
-                    .x(function(d) { return x(d.month); })
+                    .x(function(d) { return x(d.month); }) //¿que exactamente pasa por parametró?¿magia?
                     .y(function(d) { return y(d.sales); });
-
-                 
-
   // Add the valueline path.
   svg.append("path")
-  .data([totalSales])
-  .attr("class", "line")
-  .attr("d", valueline);
+    .data([totalSales])  //¿porque entre corchetes?
+    .attr("class", "line")
+    .attr("d", valueline);
+}
+function appendCircles(totalSales)
+{
+  var circleAttrs= {
+    cx: function(d) {return x(d.month);},
+    cy: function(d) {return y(d.sales);},
+    r:5 
+  };
 
-  //console.log('cx: ',cx," - ", 'cy: ', cy)
+  //probar con svg.append("circle")
+  svg.selectAll("circle")
+    .data(totalSales)
+    .enter()
+    .append("circle")
+    .attr(circleAttrs)  // Get attributes from circleAttrs var
+    //.on("mouseover", handleMouseOver)
+    .on("click", handleMouseClick)
+    ;
 
-  var circle = svg.append("circle")
-                    .attr("cx", function(d) { return x(d.month); })
-                    .attr("cy", function(d) { return y(d.sales); })
-                    .attr("r", 5);
+    //me gustaría poner este for en formato javascrit
+ // for (j=0; j<totalSales.length; j++)
+ // {
+ //   var circle = svg.append("circle")
+ //                   .attr("cx", x(totalSales[j].month))
+ //                   .attr("cy", y(totalSales[j].sales))
+ //                   .attr("r", 10)
+ //                   .on('click', (e) => {
+ //                     console.log('elementClick:',e);
+ //                     text_table="prueba: superada ";
+ //                     document.getElementById("mitexto").innerHTML=text_table;
+ //                                       })
+ //                   .on("mouseover", handleMouseOver)                    
+ //               ;
+ // }
 
-  //var valuecircle= d3.circle()
-  //                  .x(function(d) { return x(d.month); })
-  //                  .y(function(d) { return y(d.sales); })
-  //                  .r(5);
+//interesante para fijarse
+//http://bl.ocks.org/WilliamQLiu/76ae20060e19bf42d774
 
-  
+//var circleAttrs= {
+//    cx: function(d) {return x(d.month);},
+//    cy: function(d) {return y(d.sales);},
+//    r:5 
+//};
+}
 
+// Create Event Handlers for mouse
+function handleMouseClick(d, i) {  // Add interactivity
 
+  (e) => {
+                         console.log('elementClick:',e);
+                         text_table="prueba: superada ";
+                         document.getElementById("mitexto").innerHTML=text_table;
+                                           };
+}
+
+function handleMouseOver(d, i) {  // Add interactivity
+
+  // Use D3 to select element, change color and size
+  d3.select(this).attr({
+    fill: "orange",
+    r: 2 * 2
+  });
+
+  // Specify where to put label of text
+  svg.append("text").attr({
+     id: "t" + d.x + "-" + d.y + "-" + i,  // Create an id for text so we can select it later for removing on mouseout
+      x: function() { return xScale(d.x) - 30; },
+      y: function() { return yScale(d.y) - 15; }
+  })
+  .text(function() {
+    return [d.x, d.y];  // Value of the text
+  });
 }
