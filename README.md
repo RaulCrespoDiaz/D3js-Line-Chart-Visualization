@@ -1,6 +1,6 @@
 # Visualization Advanced Exercise
-## The target of this script is to Create a Line chart add dots and interaction (whenever you click on the dots display information).
-### I have introduced several important improvements as
+## The target of this script is to Create a Line chart adding dots and interaction (whenever you click on the dots display information).
+### We have introduced several important improvements as
 #### - Change the event click by mouseover and mouseleft
 #### - Refresh the chart on any change in the load file
 #### - In the load file you can introduce some charts (not only one)
