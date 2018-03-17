@@ -30,12 +30,6 @@ body {
   stroke: #000;
 }
 
-.tooltip {
-  position: absolute;
-  width: 200px;
-  height: 28px;
-  pointer-events: none;
-}
 
 .d3-tip {
   line-height: 1;
@@ -64,4 +58,13 @@ body {
   margin: -1px 0 0 0;
   top: 100%;
   left: 0;
+}
+
+.legend {
+  font: 15px sans-serif;
+}
+
+.legend rect{
+  fill:white;
+  stroke:black;
 }
