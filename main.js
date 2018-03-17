@@ -9,10 +9,10 @@ let margin = null,
   width = null,
   height = null;
 
-var CSS_COLOR_NAMES = ["AliceBlue","AntiqueWhite","Aqua","Aquamarine","Azure","Beige","Bisque","Black","BlanchedAlmond","Blue","BlueViolet","Brown","BurlyWood","CadetBlue","Chartreuse","Chocolate","Coral","CornflowerBlue","Cornsilk","Crimson","Cyan","DarkBlue","DarkCyan","DarkGoldenRod","DarkGray","DarkGrey","DarkGreen","DarkKhaki","DarkMagenta","DarkOliveGreen","Darkorange","DarkOrchid","DarkRed","DarkSalmon","DarkSeaGreen","DarkSlateBlue","DarkSlateGray","DarkSlateGrey","DarkTurquoise","DarkViolet","DeepPink","DeepSkyBlue","DimGray","DimGrey","DodgerBlue","FireBrick","FloralWhite","ForestGreen","Fuchsia","Gainsboro","GhostWhite","Gold","GoldenRod","Gray","Grey","Green","GreenYellow","HoneyDew","HotPink","IndianRed","Indigo","Ivory","Khaki","Lavender","LavenderBlush","LawnGreen","LemonChiffon","LightBlue","LightCoral","LightCyan","LightGoldenRodYellow","LightGray","LightGrey","LightGreen","LightPink","LightSalmon","LightSeaGreen","LightSkyBlue","LightSlateGray","LightSlateGrey","LightSteelBlue","LightYellow","Lime","LimeGreen","Linen","Magenta","Maroon","MediumAquaMarine","MediumBlue","MediumOrchid","MediumPurple","MediumSeaGreen","MediumSlateBlue","MediumSpringGreen","MediumTurquoise","MediumVioletRed","MidnightBlue","MintCream","MistyRose","Moccasin","NavajoWhite","Navy","OldLace","Olive","OliveDrab","Orange","OrangeRed","Orchid","PaleGoldenRod","PaleGreen","PaleTurquoise","PaleVioletRed","PapayaWhip","PeachPuff","Peru","Pink","Plum","PowderBlue","Purple","Red","RosyBrown","RoyalBlue","SaddleBrown","Salmon","SandyBrown","SeaGreen","SeaShell","Sienna","Silver","SkyBlue","SlateBlue","SlateGray","SlateGrey","Snow","SpringGreen","SteelBlue","Tan","Teal","Thistle","Tomato","Turquoise","Violet","Wheat","White","WhiteSmoke","Yellow","YellowGreen"];
-
 let svg = null;
 let x, y = null; // scales
+
+var barColor = d3.scaleOrdinal(d3.schemeCategory10);
 
 var tooltip = d3.select("body").append("div")
   .attr("class", "tooltip")
@@ -38,7 +38,7 @@ function refreshChart() {
     var parseTime = d3.timeParse("%d-%b-%y");
     
     data.forEach(function (d,i) {
-      d.month = parseTime(d.month);
+      d.date = parseTime(d.date);
       d.sales = +d.sales;
       d.chart = +d.chart;
       d.product=d.product;
@@ -59,23 +59,27 @@ function drawChart(totalSales) {
   appendXAxis(totalSales);
   appendYAxis(totalSales);
 
+  //Calculate the number of charts
   var numcharts = d3.max(totalSales, function (d, i) {
     return d.chart;
   });
+  var data_for_legend=[];
   var i;
+  
+  //iterate on every chart to draw them on the canvas
   for (i = 1; i < numcharts + 1; i++)
   { 
     chart=totalSales.filter(totalSales => totalSales.chart === i);
 
     var newchart=[];
-    //newchart[0]=CSS_COLOR_NAMES[Math.floor(Math.random()*CSS_COLOR_NAMES.length)];;
-    newchart[0]=CSS_COLOR_NAMES[i];
-    newchart[1]=totalSales.filter(totalSales => totalSales.chart === i);
+    
+    newchart=totalSales.filter(totalSales => totalSales.chart === i);
     appendLineCharts(newchart);
-    appendDot(newchart);
+    appendDot(newchart,i);
+    data_for_legend.push({"product":newchart[0].product})
   }
   
-  
+  appendLegend(data_for_legend)  
   
 }
 
@@ -107,7 +111,7 @@ function setupXScale(totalSales) {
 
   x = d3.scaleTime()
     .range([0, width])
-    .domain(d3.extent(totalSales, function (d) { return d.month }));
+    .domain(d3.extent(totalSales, function (d) { return d.date }));
 }
 
 // Now we don't have a linear range of values, we have a discrete
@@ -155,22 +159,25 @@ function appendLineCharts(totalSales) {
   // define the line
   var valueline = d3.line()
     .x(function (d) {
-      //console.log('linea:', x(d.month));
-      return x(d.month);
+      //console.log('linea:', x(d.date));
+      return x(d.date);
     }) 
     .y(function (d) { return y(d.sales); });
 
   // Add the valueline path.
   svg.append("path")
-    .data([totalSales[1]])
+    .data([totalSales])
     //.attr("class", "line")
     .attr("d", valueline)
     .style("fill", "none")
-    .style("stroke", totalSales[0])
+    .style('stroke', function(d) {console.log("product line:",d[0].product);
+                                  console.log("color line:",barColor(d[0].product));
+                                  return barColor(d[0].product);})
+    //.style("stroke", totalSales[0])
     .style("stroke-width", "2px");
 }
 
-function appendDot(totalSales) {
+function appendDot(totalSales,i) {
 
   var tip = d3.tip()
   .attr('class', 'd3-tip')
@@ -182,20 +189,66 @@ function appendDot(totalSales) {
 
   svg.call(tip);
 
-  svg.selectAll("circle")
-    .data(totalSales[1])
+  svg.selectAll("circle"+i)
+    .data(totalSales)
     .enter().append("circle")
     .attr("class", "circle")
-    .style("fill", totalSales[0])
+    .attr('fill', function(d) {
+      console.log("color dot:",barColor(d.product));
+      return barColor(d.product);
+      
+      })
+    //.style("fill", totalSales[0])
     .attr("r", 5)
-    .attr("cx", function(d) { return x(d.month); })
+    .attr("cx", function(d) { return x(d.date); })
     .attr("cy", function(d) { return y(d.sales); })
     .on('mouseover', tip.show)
     .on('mouseout', tip.hide);
     
 }
 
-//basado en: http://bl.ocks.org/weiglemc/6185069
-//otro ejemplo interesante: http://bl.ocks.org/WilliamQLiu/76ae20060e19bf42d774
+ //  Now let's add a Legend
+ function appendLegend(totalSales){
+
+  legend = svg.append('g')
+	  .attr('class', 'legend')
+	  .attr('height', 100)
+    .attr('width', 100)
+  
+  legend.selectAll('rect')
+    .data(totalSales)
+    .enter()
+    .append('rect')
+	  .attr('x', width-85)
+    .attr('y', -10)
+    .attr('width', 90)
+	  .attr('height', (function(d, i){ return 20+(i *  20)}))  
+  
+  legend.selectAll('circle')
+    .data(totalSales)
+    .enter()
+    .append('circle')
+	  .attr('cx', width - 70)
+    .attr('cy', (d, i)=> i *  20)
+	  .attr('r', 5)
+    .attr('fill', function(d) {
+            return barColor(d.product);      
+      })
+    .attr('class', 'circle');
+    
+  legend.selectAll('text')
+    .data(totalSales)
+    .enter()
+    .append('text')
+	  .attr('x', width - 60)
+    .attr('y',function(d, i) { return i *  20+5;
+      console.log('valor: ',d);})
+	  .text(function(d){ return d.product});
+}
+
+
+
+
+
 
 
