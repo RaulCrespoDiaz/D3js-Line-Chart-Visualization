@@ -1,10 +1,11 @@
 # Visualization Advanced Exercise
 ## The target of this script is to Create a Line chart add dots and interaction (whenever you click on the dots display information).
-### I have introduced several improvements as
-### * Refresh the chart on any change in the load file
-### * In the load file you can introduce some charts (not only one)
+### I have introduced several important improvements as
+#### - Change the event click by mouseover and mouseleft
+#### - Refresh the chart on any change in the load file
+#### - In the load file you can introduce some charts (not only one)
 
-#### Final result
+### Final result
 
 ![Final chart](./pictures/Exercise2_final_result.png "Final result")
 
@@ -12,7 +13,7 @@ The chart shows the sales of several products in our company
 
 ---
 
-#### Usage
+### Usage
 
 > Open _index.html_ on your favorite web browser.
 > You could need to open a lite-server
@@ -24,189 +25,288 @@ The chart shows the sales of several products in our company
 
 ---
 
-#### Implementation overview
+### Implementation overview
 
-The following sample data will be used as input for the line chart:
+The sample data are in the file: _data.csv_
 
-```javascript
-var totalSales = [
-    { month: new Date(2016,10, 01), sales: 6500 },
-    { month: new Date(2016,11, 01), sales: 5400 },
-    { month: new Date(2016,12, 01), sales: 3500 },
-    { month: new Date(2017,1, 01), sales: 9000 },
-    { month: new Date(2017,2, 01), sales: 8500 },
-    ];
-```
+**1. Refresh Chart**
 
-**1. SVG area**
-
-The following code sets canvas size and margins used to plot SVG area:
+The following code refresh the chart every n miliseconds (in this example n=500000):
 
 ```javascript
-function setupCanvasSize() {
-  margin = {top: 20, left: 80, bottom: 20, right: 30};
-  width = 900 - margin.left - margin.right;
-  height = 320 - margin.top - margin.bottom;
+//We call these functions
+refreshChart();
+autoRefreshChart(500000);
+
+function autoRefreshChart(miliSeconds) {
+  setInterval(function () {
+    refreshChart();
+  }, miliSeconds);
 }
 
-function appendSvg(domElement) {
-  svg = d3.select(domElement).append("svg")
-              .attr("width", width + margin.left + margin.right)
-              .attr("height", height + margin.top + margin.bottom)
-              .append("g")
-              .attr("transform",`translate(${margin.left}, ${margin.top})`);
-}
-```
-
-**2. Tooltip area**
-
-A new _\<div>_ is created to contain tooltip information. Initial _opacity_ is set to 0 as the tooltip should not be visible until a dot in the line chart is clicked:
-
-```javascript
-function appendTooltip(domElement){
-  tooltip=d3.select(domElement)
-    .append('div')	
-    .attr('class', 'tooltip')				
-    .style('opacity', 0);
+function refreshChart() {
+  d3.csv("data.csv", function (error, data) {
+    if (error) throw error;
+    // parse the date / time
+    var parseTime = d3.timeParse("%d-%b-%y");
+    
+    data.forEach(function (d,i) {
+      d.date = parseTime(d.date);
+      d.sales = +d.sales;
+      d.chart = +d.chart;
+      d.product=d.product;
+    });
+    clearCanvas();
+    drawChart(data)
+  });
 }
 ```
 
-A specific CSS style has been created for the tooltip in order to show a nice semi-transparent box containing the value when a dot in the line chart is clicked:
+**2. drawChart**
+It´s the function to draw all the charts, points and leyends
 
 ```javascript
-.tooltip {
-  position: absolute;           
-  text-align: center;
-  color: white;
-  width: 50px;                  
-  height: 30px;                 
-  padding: 8px;             
-  font: 13px sans-serif;        
-  background: lightsteelblue;   
-  border: 0px;      
-  border-radius: 8px;           
-  pointer-events: none;         
+function drawChart(totalSales) {
+  setupXScale(totalSales);
+  setupYScale(totalSales);
+  appendXAxis(totalSales);
+  appendYAxis(totalSales);
+
+  //Calculate the number of charts
+  var numcharts = d3.max(totalSales, function (d, i) {
+    return d.chart;
+  });
+  var data_for_legend=[];
+  var i;
+  
+  //iterate on every chart to draw them on the canvas
+  for (i = 1; i < numcharts + 1; i++)
+  { 
+    chart=totalSales.filter(totalSales => totalSales.chart === i);
+
+    var newchart=[];
+    
+    newchart=totalSales.filter(totalSales => totalSales.chart === i);
+    appendLineCharts(newchart);
+    appendDot(newchart,i);
+    data_for_legend.push({"product":newchart[0].product})
+  }
+  
+  appendLegend(data_for_legend)  
+  
+}
+```
+
+**2.1 draw lines of the charts**
+We call the next function
+
+```javascript
+function appendLineCharts(totalSales) {
+
+  // define the line
+  var valueline = d3.line()
+    .x(function (d) {
+      //console.log('linea:', x(d.date));
+      return x(d.date);
+    }) 
+    .y(function (d) { return y(d.sales); });
+
+  // Add the valueline path.
+  svg.append("path")
+    .data([totalSales])
+    //.attr("class", "line")
+    .attr("d", valueline)
+    .style("fill", "none")
+    .style('stroke', function(d) {console.log("product line:",d[0].product);
+                                  console.log("color line:",barColor(d[0].product));
+                                  return barColor(d[0].product);})
+    //.style("stroke", totalSales[0])
+    .style("stroke-width", "2px");
+}
+```
+
+**2.2 draw ineractive dots on the charts**
+We call the next function
+
+```javascript
+function appendDot(totalSales,i) {
+
+  var tip = d3.tip()
+  .attr('class', 'd3-tip')
+  .offset([-10, 0])
+  .html(function(d) {
+    return "<strong>Product:</strong> <span style='color:yellow'>" + d.product + "</span>" + "</br>"+ "</br>"
+          + "<strong>Sales:</strong> <span style='color:yellow'>" + d.sales +"$"+ "</span>" 
+    ;});
+
+  svg.call(tip);
+
+  svg.selectAll("circle"+i)
+    .data(totalSales)
+    .enter().append("circle")
+    .attr("class", "circle")
+    .attr('fill', function(d) {
+      console.log("color dot:",barColor(d.product));
+      return barColor(d.product);
+      
+      })
+    
+    .attr("r", 5)
+    .attr("cx", function(d) { return x(d.date); })
+    .attr("cy", function(d) { return y(d.sales); })
+    .on('mouseover', tip.show)
+    .on('mouseout', tip.hide);
+    
+}
+```
+
+A specific CSS style has been created for the tool type
+
+```css
+.d3-tip {
+  line-height: 1;
   font-weight: bold;
+  padding: 12px;
+  background: rgba(0, 0, 0, 0.8);
+  color: #fff;
+  border-radius: 2px;
+}
+
+/* Creates a small triangle extender for the tooltip */
+.d3-tip:after {
+  box-sizing: border-box;
+  display: inline;
+  font-size: 12px;
+  width: 100%;
+  line-height: 1;
+  color: rgba(0, 0, 0, 0.8);
+  content: "\25BC";
+  position: absolute;
+  text-align: center;
+}
+
+/* Style northward tooltips differently */
+.d3-tip.n:after {
+  margin: -1px 0 0 0;
+  top: 100%;
+  left: 0;
+}
+```
+**2.3 draw the leyend on the canvas**
+We call the next function
+
+```javascript
+//  Now let's add a Legend
+ function appendLegend(totalSales){
+
+  legend = svg.append('g')
+	  .attr('class', 'legend')
+	  .attr('height', 100)
+    .attr('width', 100)
+  
+  legend.selectAll('rect')
+    .data(totalSales)
+    .enter()
+    .append('rect')
+	  .attr('x', width-85)
+    .attr('y', -10)
+    .attr('width', 90)
+	  .attr('height', (function(d, i){ return 20+(i *  20)}))  
+  
+  legend.selectAll('circle')
+    .data(totalSales)
+    .enter()
+    .append('circle')
+	  .attr('cx', width - 70)
+    .attr('cy', (d, i)=> i *  20)
+	  .attr('r', 5)
+    .attr('fill', function(d) {
+            return barColor(d.product);      
+      })
+    .attr('class', 'circle');
+    
+  legend.selectAll('text')
+    .data(totalSales)
+    .enter()
+    .append('text')
+	  .attr('x', width - 60)
+    .attr('y',function(d, i) { return i *  20+5;
+      console.log('valor: ',d);})
+	  .text(function(d){ return d.product});
+}
+```
+A specific CSS style has been created for the tool type
+
+```css
+.legend {
+  font: 15px sans-serif;
+}
+
+.legend rect{
+  fill:white;
+  stroke:black;
 }
 ```
 
 **3. X/Y axis**
 
-Axis scales are defined based on input data (_totalSales_ defined in step 1 above). X axis data is composed of a time scale from date values, while Y axis data is composed of a liner range between 0 and _maxSales_:
+We draw the X and X axis
 
 ```javascript
-function setupXScale()
-{
+function setupXScale(totalSales) {
+
   x = d3.scaleTime()
-      .range([0, width])
-      .domain(d3.extent(totalSales, function(d) { return d.month}));
+    .range([0, width])
+    .domain(d3.extent(totalSales, function (d) { return d.date }));
 }
 
-function setupYScale()
-{
-  var maxSales = d3.max(totalSales, function(d, i) {
-    return d.sales;
-  });
+// Now we don't have a linear range of values, we have a discrete
+// range of values (one per product)
+// Here we are generating an array of product names
+function setupYScale(totalSales) {
+  var maxSales = d3.max(totalSales, function (d, i) { return d.sales; });
+
   y = d3.scaleLinear()
-        .range([height, 0])
-        .domain([0, maxSales]);
+    .range([height, 0])
+    .domain([0, maxSales]);
+
 }
-```
 
-Once scales are defined, both X and Y axis are configured in D3 to be shown on the bottom and left, respectively:
-
-```javascript
-function appendXAxis() {
+function appendXAxis(totalSales) {
   // Add the X Axis
   svg.append("g")
-    .attr("transform",`translate(0, ${height})`)
+    .attr("transform", `translate(0, ${height})`)
     .call(d3.axisBottom(x))
-    .attr("class", "axis");
-}  
+    svg.append("text")             
+    
+    .attr("y", height+ margin.top -25)
+    .attr("x",(width / 2))
+    .style("text-anchor", "middle")
+    .text("Time");
+}
 
-function appendYAxis() {
+function appendYAxis(totalSales) {
   // Add the Y Axis
   svg.append("g")
-  .call(d3.axisLeft(y))
-  .attr("class", "axis");
+    .call(d3.axisLeft(y))
+    svg.append("text")
+    .attr("transform", "rotate(-90)")
+    .attr("y", 0 - margin.left)
+    .attr("x",0 - (height / 2))
+    .attr("dy", "1em")
+    .style("text-anchor", "middle")
+    .text("Sales");
 }
 ```
 
-Axis values are rendered using a custom CSS style:
+Axis values have an especific CSS style:
 
-```javascript
-.axis {
+```css
+.axis path,
+.axis line {
   fill: none;
-  stroke: blue;
-  stroke-width: 0.5px;
+  stroke: #000;
+  shape-rendering: crispEdges;
 }
 ```
 
-**4. Line chart**
-
-The following code defines the line using sample data from step 1 above, and then represents it as a SVG path:
-
-```javascript
-function appendLineCharts()
-{
-  // define the line
-  var valueline = d3.line()
-                    .x(function(d) { return x(d.month); })
-                    .y(function(d) { return y(d.sales); });
-  // Add the value path
-  svg.append("path")
-      .data([totalSales])
-      .attr("class", "line")
-      .attr("d", valueline);
-}
-```
-
-Line is painted in red according to its own CSS style:
-
-```javascript
-.line {
-  fill: none;
-  stroke: red;
-  stroke-width: 1.5px;
-}
-```
-
-**5. Interactive dots**
-
-As a last step in this exercise, data points are shown on top of the line chart as interactive dots along the SVG path:
-
-```javascript
-function appendPointCharts(){
-  svg.selectAll('dot')
-    .data(totalSales)
-    .enter().append('circle')
-    .attr("class", "dot")
-    .attr('r', 4.5)
-    .attr('cx', d => x(d.month))
-    .attr('cy', d => y(d.sales))
-    .on('mouseout',d=>{
-      //Hide the tooltip
-      tooltip.transition()		
-        .duration(800)
-        .style('opacity', 0);
-    })
-    .on('mousedown',d=>{
-      //Show the tooltip when a point in the chart is clicked
-      tooltip.transition()		
-            .duration(10)		
-            .style('opacity', .9);
-      // Add tooltip content
-      tooltip.html(`<span>Sales: ${d.sales}</span>`)
-            .style("left", (d3.event.pageX) + "px")     
-            .style("top", (d3.event.pageY - 28) + "px");  
-    });
-}
-```
-
-Dots are shown in red according to a specific CSS style:
-
-```javascript
-.dot {
-  fill: red;
-}
-```
