@@ -63,6 +63,7 @@ function refreshChart() {
 ```
 
 **2. DrawChart**
+
 It´s the function to draw all the charts, points and leyends
 
 ```javascript
@@ -98,6 +99,7 @@ function drawChart(totalSales) {
 ```
 
 **2.1 Draw lines of the charts**
+
 We call the next function
 
 ```javascript
@@ -126,6 +128,7 @@ function appendLineCharts(totalSales) {
 ```
 
 **2.2 Draw interactive dots on the charts**
+
 We call the next function
 
 ```javascript
@@ -193,6 +196,7 @@ A specific CSS style has been created for the tool type
 }
 ```
 **2.3 draw the leyend on the canvas**
+
 We call the next function
 
 ```javascript
