@@ -1,4 +1,4 @@
-# Visualization Advanced Exercise
+# D3js Line Chart Visualization
 ## The target of this script is to Create a Line chart adding dots and interaction (whenever you click on the dots display information).
 ### We have introduced several important improvements as
 #### - Change the event click by mouseover and mouseleft
